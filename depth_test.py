@@ -39,9 +39,15 @@ def main():
         gray_left = cv2.cvtColor(left_feed, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(right_feed, cv2.COLOR_BGR2GRAY)
 
-        # StereoSGBM Parameters
+        # OPTIMIZATION 1: Downsample the grayscale images to speed up computation
+        # (e.g., resizing to 50% width and height)
+        scale = 0.5
+        gray_left_small = cv2.resize(gray_left, (0, 0), fx=scale, fy=scale)
+        gray_right_small = cv2.resize(gray_right, (0, 0), fx=scale, fy=scale)
+
+        # OPTIMIZATION 2: Tweak StereoSGBM Parameters for Speed
         min_disp = 0
-        num_disp = 16 * 5  # Must be divisible by 16
+        num_disp = 16 * 3  # Reduced from 80 to 48 (must be approx divisible by 16)
         block_size = 5
         
         stereo = cv2.StereoSGBM_create(
@@ -52,13 +58,18 @@ def main():
             P2=32 * 3 * block_size**2,
             disp12MaxDiff=1,
             uniquenessRatio=10,
-            speckleWindowSize=100,
-            speckleRange=32
+            speckleWindowSize=50,  # Reduced for speed
+            speckleRange=16,       # Reduced for speed
+            mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY  # OPTIMIZATION 3: Use 3-way SGBM (faster)
         )
 
-        # Compute Disparity
-        # Disparity is returned multiplied by 16, so divide by 16
-        disparity = stereo.compute(gray_left, gray_right).astype(np.float32) / 16.0
+        # Compute Disparity on the smaller images
+        disparity_small = stereo.compute(gray_left_small, gray_right_small).astype(np.float32) / 16.0
+        
+        # OPTIMIZATION 4: Resize disparity back to original size for display
+        disparity = cv2.resize(disparity_small, (width // 2, height), interpolation=cv2.INTER_LINEAR)
+        # Disparity values scale linearly with image resolution, so multiply by (1/scale) to restore true magnitude
+        disparity = disparity / scale
         
         # Avoid division by zero and invalid disparity values (-1.0 or <= 0)
         disparity[disparity <= 0] = 0.1
