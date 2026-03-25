@@ -1,8 +1,13 @@
 import cv2
 import numpy as np
+import torch
 from ultralytics import YOLO
 
 def main():
+    # Detect if CUDA is available (crucial for NVIDIA Jetson)
+    device = 0 if torch.cuda.is_available() else "cpu"
+    print(f"Running inference on device: {'GPU (CUDA)' if device == 0 else 'CPU'}")
+
     # Load YOLO11 instance segmentation model
     # 'yolo11n-seg.pt' is the newest lightweight layout for real-time inference
     print("Loading YOLO model...")
@@ -34,8 +39,19 @@ def main():
         left_feed = frame[:, :half_width]
 
         # Class index 1 represents 'bicycle' in the COCO dataset.
-        # conf=0.3 filters out weak detections, verbose=False hides console spam.
-        results = model.predict(source=left_feed, classes=[1], conf=0.3, verbose=False)
+        # Jetson Nano Optimizations: 
+        #   imgsz=416 -> drastically drops tensor footprint.
+        #   half=True (FP16) -> Jetson architectures excel at half-precision math.
+        #   device=x  -> enforce running purely statically on GPU architecture.
+        results = model.predict(
+            source=left_feed, 
+            classes=[1], 
+            conf=0.3, 
+            verbose=False,
+            imgsz=416, 
+            half=(device == 0), 
+            device=device
+        )
 
         # Make a clone to draw outlines and masks onto without traditional bounding boxes
         annotated_frame = left_feed.copy()
