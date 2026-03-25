@@ -1,17 +1,19 @@
 import cv2
 import numpy as np
 import torch
+import torchvision
 from ultralytics import YOLO
 
 def main():
     # Detect if CUDA is available (crucial for NVIDIA Jetson)
-    device = 0 if torch.cuda.is_available() else "cpu"
-    print(f"Running inference on device: {'GPU (CUDA)' if device == 0 else 'CPU'}")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Running inference on device: {'GPU (CUDA)' if device == 'cuda' else 'CPU'}")
 
     # Load YOLO11 instance segmentation model
     # 'yolo11n-seg.pt' is the newest lightweight layout for real-time inference
     print("Loading YOLO model...")
     model = YOLO("yolo11n-seg.pt")
+    model.to(device)  # Explicitly move model to selected device
 
     cap = cv2.VideoCapture(0)
 
@@ -46,10 +48,10 @@ def main():
         results = model.predict(
             source=left_feed, 
             classes=[1], 
-            conf=0.15, # Lowered from 0.3 for significantly higher sensitivity
+            conf=0.1, # Lowered from 0.3 for significantly higher sensitivity
             verbose=False,
             imgsz=416, 
-            half=(device == 0), 
+            half=(device == "cuda"), 
             device=device
         )
 
