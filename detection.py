@@ -46,7 +46,7 @@ def main():
         results = model.predict(
             source=left_feed, 
             classes=[1], 
-            conf=0.3, 
+            conf=0.15, # Lowered from 0.3 for significantly higher sensitivity
             verbose=False,
             imgsz=416, 
             half=(device == 0), 
