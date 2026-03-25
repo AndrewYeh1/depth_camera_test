@@ -36,27 +36,28 @@ def main():
         right_feed = frame[:, half_width:]
 
         # OPTIMIZATION 1: Downsample the color images to speed up computation
-        # (e.g., resizing to 50% width and height)
-        scale = 0.5
-        left_small = cv2.resize(left_feed, (0, 0), fx=scale, fy=scale)
-        right_small = cv2.resize(right_feed, (0, 0), fx=scale, fy=scale)
+        # (Matches stereo-camera-visualization project)
+        scale = 0.25
+        left_small = cv2.resize(left_feed, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        right_small = cv2.resize(right_feed, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
         # OPTIMIZATION 2: Tweak StereoSGBM Parameters
-        min_disp = 0
-        num_disp = 16 * 8  # Increased to 128 to detect closer objects
-        block_size = 11    # Increased to 11 to fill in textureless surfaces
+        num_channels = left_small.shape[2] if len(left_small.shape) == 3 else 1
+        num_disparities = 3
+        num_disp = 16 * num_disparities
+        block_size = 9
         
         stereo = cv2.StereoSGBM_create(
-            minDisparity=min_disp,
+            minDisparity=0,
             numDisparities=num_disp,
             blockSize=block_size,
-            P1=8 * 3 * block_size**2,
-            P2=32 * 3 * block_size**2,
-            disp12MaxDiff=1,
-            uniquenessRatio=15,    # Increased to be more strict on correct matches
-            speckleWindowSize=150, # Increased to filter out larger false noise patches
-            speckleRange=2,        # Reduced range for tighter speckle filtering
-            mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY  # OPTIMIZATION 3: Use 3-way SGBM (faster)
+            P1=8 * num_channels * block_size**2,
+            P2=32 * num_channels * block_size**2,
+            disp12MaxDiff=-1,
+            uniquenessRatio=5,
+            speckleWindowSize=0,
+            speckleRange=0,
+            mode=cv2.STEREO_SGBM_MODE_SGBM
         )
 
         # Compute Disparity on the smaller color images
