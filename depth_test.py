@@ -41,10 +41,10 @@ def main():
         left_small = cv2.resize(left_feed, (0, 0), fx=scale, fy=scale)
         right_small = cv2.resize(right_feed, (0, 0), fx=scale, fy=scale)
 
-        # OPTIMIZATION 2: Tweak StereoSGBM Parameters for Speed
+        # OPTIMIZATION 2: Tweak StereoSGBM Parameters
         min_disp = 0
-        num_disp = 16 * 3  # Reduced from 80 to 48 (must be approx divisible by 16)
-        block_size = 5
+        num_disp = 16 * 8  # Increased to 128 to detect closer objects
+        block_size = 11    # Increased to 11 to fill in textureless surfaces
         
         stereo = cv2.StereoSGBM_create(
             minDisparity=min_disp,
