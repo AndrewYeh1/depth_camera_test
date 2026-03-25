@@ -35,15 +35,11 @@ def main():
         left_feed = frame[:, :half_width]
         right_feed = frame[:, half_width:]
 
-        # Convert to grayscale for StereoSGBM
-        gray_left = cv2.cvtColor(left_feed, cv2.COLOR_BGR2GRAY)
-        gray_right = cv2.cvtColor(right_feed, cv2.COLOR_BGR2GRAY)
-
-        # OPTIMIZATION 1: Downsample the grayscale images to speed up computation
+        # OPTIMIZATION 1: Downsample the color images to speed up computation
         # (e.g., resizing to 50% width and height)
         scale = 0.5
-        gray_left_small = cv2.resize(gray_left, (0, 0), fx=scale, fy=scale)
-        gray_right_small = cv2.resize(gray_right, (0, 0), fx=scale, fy=scale)
+        left_small = cv2.resize(left_feed, (0, 0), fx=scale, fy=scale)
+        right_small = cv2.resize(right_feed, (0, 0), fx=scale, fy=scale)
 
         # OPTIMIZATION 2: Tweak StereoSGBM Parameters for Speed
         min_disp = 0
@@ -63,8 +59,8 @@ def main():
             mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY  # OPTIMIZATION 3: Use 3-way SGBM (faster)
         )
 
-        # Compute Disparity on the smaller images
-        disparity_small = stereo.compute(gray_left_small, gray_right_small).astype(np.float32) / 16.0
+        # Compute Disparity on the smaller color images
+        disparity_small = stereo.compute(left_small, right_small).astype(np.float32) / 16.0
         
         # OPTIMIZATION 4: Resize disparity back to original size for display
         disparity = cv2.resize(disparity_small, (width // 2, height), interpolation=cv2.INTER_LINEAR)
