@@ -53,14 +53,17 @@ def main():
             P1=8 * 3 * block_size**2,
             P2=32 * 3 * block_size**2,
             disp12MaxDiff=1,
-            uniquenessRatio=10,
-            speckleWindowSize=50,  # Reduced for speed
-            speckleRange=16,       # Reduced for speed
+            uniquenessRatio=15,    # Increased to be more strict on correct matches
+            speckleWindowSize=150, # Increased to filter out larger false noise patches
+            speckleRange=2,        # Reduced range for tighter speckle filtering
             mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY  # OPTIMIZATION 3: Use 3-way SGBM (faster)
         )
 
         # Compute Disparity on the smaller color images
         disparity_small = stereo.compute(left_small, right_small).astype(np.float32) / 16.0
+
+        # Optional: Apply a spatial filter (Median Blur) to eliminate salt-and-pepper noise
+        disparity_small = cv2.medianBlur(disparity_small, 5)
         
         # OPTIMIZATION 4: Resize disparity back to original size for display
         disparity = cv2.resize(disparity_small, (width // 2, height), interpolation=cv2.INTER_LINEAR)
