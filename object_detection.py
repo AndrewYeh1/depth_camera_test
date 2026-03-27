@@ -5,7 +5,7 @@ import numpy as np
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Running inference on device: {'GPU (CUDA)' if device == 'cuda' else 'CPU'}")
-model = YOLO("yolo26m-seg.pt")
+model = YOLO("yolo26l-seg.pt")
 model.to(device)  # Explicitly move model to selected device
 
 cap = cv2.VideoCapture("WIN_20260326_10_01_55_Pro.mp4")
