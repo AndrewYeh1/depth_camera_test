@@ -68,8 +68,13 @@ while True:
         diff[ignore_mask == 255] = 0
             
         # Threshold the difference map to black & white
-        _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
-        thresh = cv2.dilate(thresh, None, iterations=2)
+        # Increased threshold from 25 to 70 to completely ignore subtle lighting shifts and shadows,
+        # forcing it to only detect drastic pixel color changes (actual physical objects).
+        _, thresh = cv2.threshold(diff, 70, 255, cv2.THRESH_BINARY)
+        
+        # Erode first to peel away tiny pixel noise, then dilate heavily to group the solid objects
+        thresh = cv2.erode(thresh, None, iterations=1)
+        thresh = cv2.dilate(thresh, None, iterations=4)
         
         # Find contours of differences
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
