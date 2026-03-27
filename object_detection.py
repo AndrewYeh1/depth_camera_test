@@ -21,10 +21,22 @@ if reference is not None:
     ref_blur = cv2.GaussianBlur(reference, (21, 21), 0)
 else:
     print("Warning: reference.png not found. Foreign object detection disabled.")
+total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+current_frame_idx = 0
+paused = False
+
+print("\n--- Navigation Controls ---")
+print("  Space / 'p' : Play / Pause video")
+print("  d           : Skip forward 1 second (or 1 frame if paused)")
+print("  a           : Rewind 1 second (or 1 frame if paused)")
+print("  q           : Quit")
+print("---------------------------\n")
 
 while True:
+    cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame_idx)
     ret, frame = cap.read()
     if not ret:
+        print("End of video reached.")
         break
         
     # Rotate the frame 90 degrees to the right (clockwise)
@@ -105,10 +117,26 @@ while True:
     # Optional debugging window to see what the algorithm "sees" changing:
     # if reference is not None: cv2.imshow("Difference Map", diff)
 
-    key = cv2.waitKey(1)
+    delay = 0 if paused else 1
+    key = cv2.waitKey(delay) & 0xFF
 
-    if key & 0xFF == ord('q'):
+    if key == ord('q'):
         break
+    elif key == ord('p') or key == 32: # 'p' or Spacebar
+        paused = not paused
+        # Advance slightly if we just hit play to prevent re-detecting the same frame
+        if not paused:
+            current_frame_idx += 1
+    elif key == ord('d'):
+        step = 1 if paused else 30 # fast-forward 30 frames
+        current_frame_idx = min(current_frame_idx + step, total_frames - 1)
+    elif key == ord('a'):
+        step = 1 if paused else 30 # rewind 30 frames
+        current_frame_idx = max(current_frame_idx - step, 0)
+    else:
+        # Normal playback automatically advances
+        if not paused:
+            current_frame_idx += 1
 
 cap.release()
 cv2.destroyAllWindows()
