@@ -16,8 +16,9 @@ if reference is not None:
     # Make sure reference is matched to the runtime dimensions & orientation
     if reference.shape[:2] != (640, 384): # (Height, Width)
         reference = cv2.resize(reference, (384, 640))
-    ref_gray = cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY)
-    ref_blur = cv2.GaussianBlur(ref_gray, (21, 21), 0)
+    
+    # Blur the full color reference image instead of grayscale
+    ref_blur = cv2.GaussianBlur(reference, (21, 21), 0)
 else:
     print("Warning: reference.png not found. Foreign object detection disabled.")
 
@@ -55,22 +56,24 @@ while True:
 
     # --- Foreign Object Detection via absdiff ---
     if reference is not None:
-        # Convert the raw frame to grayscale and blur it
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray_blur = cv2.GaussianBlur(gray, (21, 21), 0)
+        # Blur the raw BGR color frame (do not convert to grayscale first!)
+        frame_blur = cv2.GaussianBlur(frame, (21, 21), 0)
         
-        # Calculate the absolute difference between background and current frame
-        diff = cv2.absdiff(ref_blur, gray_blur)
+        # Calculate the absolute difference across all 3 color channels (Blue, Green, Red)
+        diff_color = cv2.absdiff(ref_blur, frame_blur)
+        
+        # Convert the color difference output into a single intensity channel so we can threshold it
+        diff_intensity = cv2.cvtColor(diff_color, cv2.COLOR_BGR2GRAY)
         
         # MASK OUT THE BIKE FROM THE DIFFERENCE: 
         # This prevents the bike's actual pixels from registering as "foreign objects",
         # but since we punched a hole for the backpack, it WILL be checked.
-        diff[ignore_mask == 255] = 0
+        diff_intensity[ignore_mask == 255] = 0
             
         # Threshold the difference map to black & white
         # Increased threshold from 25 to 70 to completely ignore subtle lighting shifts and shadows,
         # forcing it to only detect drastic pixel color changes (actual physical objects).
-        _, thresh = cv2.threshold(diff, 50, 255, cv2.THRESH_BINARY)
+        _, thresh = cv2.threshold(diff_intensity, 50, 255, cv2.THRESH_BINARY)
         
         # Erode first to peel away tiny pixel noise, then dilate heavily to group the solid objects
         thresh = cv2.erode(thresh, None, iterations=1)
