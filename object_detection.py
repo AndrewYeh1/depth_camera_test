@@ -70,7 +70,7 @@ while True:
         # Threshold the difference map to black & white
         # Increased threshold from 25 to 70 to completely ignore subtle lighting shifts and shadows,
         # forcing it to only detect drastic pixel color changes (actual physical objects).
-        _, thresh = cv2.threshold(diff, 70, 255, cv2.THRESH_BINARY)
+        _, thresh = cv2.threshold(diff, 50, 255, cv2.THRESH_BINARY)
         
         # Erode first to peel away tiny pixel noise, then dilate heavily to group the solid objects
         thresh = cv2.erode(thresh, None, iterations=1)
