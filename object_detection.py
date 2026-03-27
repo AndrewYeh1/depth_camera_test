@@ -8,7 +8,7 @@ print(f"Running inference on device: {'GPU (CUDA)' if device == 'cuda' else 'CPU
 model = YOLO("yolo26l-seg.pt")
 model.to(device)  # Explicitly move model to selected device
 
-cap = cv2.VideoCapture("WIN_20260326_10_01_55_Pro.mp4")
+cap = cv2.VideoCapture("WIN_20260326_10_11_43_Pro.mp4")
 
 # --- Load the reference frame for background subtraction ---
 reference = cv2.imread('reference.png')
