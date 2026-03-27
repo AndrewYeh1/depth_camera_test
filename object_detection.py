@@ -93,6 +93,14 @@ while True:
     # Using the ignore_mask ensures the backpack remains fully visible!
     frame[ignore_mask == 255] = (0, 0, 0)
 
+    # Draw blue bounding boxes around all objects YOLO detected
+    if results[0].boxes is not None:
+        for box, cls in zip(results[0].boxes.xyxy, results[0].boxes.cls):
+            x1, y1, x2, y2 = map(int, box)
+            class_name = model.names[int(cls)]
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            cv2.putText(frame, class_name, (x1, max(y1 - 10, 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
     cv2.imshow("Frame", frame)
     # Optional debugging window to see what the algorithm "sees" changing:
     # if reference is not None: cv2.imshow("Difference Map", diff)
