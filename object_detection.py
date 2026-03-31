@@ -2,6 +2,7 @@ import cv2
 from ultralytics import YOLO
 import torch
 import numpy as np
+import time
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Running inference on device: {'GPU (CUDA)' if device == 'cuda' else 'CPU'}")
@@ -33,6 +34,7 @@ print("  q           : Quit")
 print("---------------------------\n")
 
 while True:
+    loop_start_time = time.time()
     cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame_idx)
     ret, frame = cap.read()
     if not ret:
@@ -117,8 +119,24 @@ while True:
     # Optional debugging window to see what the algorithm "sees" changing:
     # if reference is not None: cv2.imshow("Difference Map", diff)
 
-    delay = 0 if paused else 1
+    loop_end_time = time.time()
+    process_time = loop_end_time - loop_start_time
+    
+    # Calculate how long we should wait to cap at 30 FPS (1 frame = ~0.0333s)
+    target_frame_time = 1.0 / 30.0
+    
+    wait_time_ms = 0
+    if not paused:
+        if process_time < target_frame_time:
+            wait_time_ms = int((target_frame_time - process_time) * 1000)
+            wait_time_ms = max(1, wait_time_ms)
+        else:
+            wait_time_ms = 1
+
+    delay = 0 if paused else wait_time_ms
     key = cv2.waitKey(delay) & 0xFF
+
+    actual_elapsed_time = time.time() - loop_start_time
 
     if key == ord('q'):
         break
@@ -136,7 +154,9 @@ while True:
     else:
         # Normal playback automatically advances
         if not paused:
-            current_frame_idx += 1
+            # Force realtime speed (30fps) by skipping frames if processing was slow
+            frames_to_advance = max(1, round(actual_elapsed_time * 30.0))
+            current_frame_idx += frames_to_advance
 
 cap.release()
 cv2.destroyAllWindows()
