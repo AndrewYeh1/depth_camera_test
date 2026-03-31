@@ -116,7 +116,7 @@ while True:
     other_polygons = []
     if results[0].masks is not None:
         for i, cls in enumerate(results[0].boxes.cls):
-            if int(cls) == 1 or int(cls) == 3: # Bicycle / Motorcycle
+            if int(cls) == 1: # Bicycle / Motorcycle
                 bike_polygons.append(np.array(results[0].masks.xy[i], np.int32))
             else: # Other objects YOLO detects
                 other_polygons.append(np.array(results[0].masks.xy[i], np.int32))
