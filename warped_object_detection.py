@@ -43,26 +43,31 @@ homography_matrix = cv2.getPerspectiveTransform(src_points, dst_points)
 
 target_w = int(w)
 
-def apply_perspective_pipeline(frame):
-    """Takes a RAW horizontal frame directly from cap.read() and runs the entire warp pipeline"""
+def preprocess_yolo_frame(frame):
+    """Rotates and undistorts the raw camera frame for YOLO inference"""
     if frame is None:
         return None
     
-    # 1. Rotate to correct orientation
-    # Only rotate if the frame matches the raw horizontal dimensions
+    # 1. Rotate to correct orientation if it matches the raw horizontal dimensions
     if frame.shape[:2] == (real_h, real_w):
         frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
     # 2. Undistort Fisheye
     undistorted = cv2.undistort(frame, camera_matrix, dist_coeffs)
+    return undistorted
 
-    # 3. Perspective Warp
-    warped = cv2.warpPerspective(undistorted, homography_matrix, (w, h))
+def apply_perspective_warp(image):
+    """Takes an undistorted image (or a mask) and stretches it into the bird's eye view"""
+    if image is None:
+        return None
+        
+    # 1. Perspective Warp
+    warped = cv2.warpPerspective(image, homography_matrix, (w, h))
 
-    # 4. Stretch horizontally
+    # 2. Stretch horizontally
     warped = cv2.resize(warped, (target_w, w))
 
-    # 5. Crop
+    # 3. Crop
     h_warped, w_warped = warped.shape[:2]
     crop_top = 50
     crop_bottom = h_warped - 300
@@ -75,12 +80,12 @@ def apply_perspective_pipeline(frame):
         
     return warped
 
-
 # --- Load and preprocess reference frame ---
 reference = cv2.imread('reference.png')
 if reference is not None:
     print("Preprocessing reference.png through warp pipeline...")
-    warped_reference = apply_perspective_pipeline(reference)
+    base_ref = preprocess_yolo_frame(reference)
+    warped_reference = apply_perspective_warp(base_ref)
     ref_blur = cv2.GaussianBlur(warped_reference, (21, 21), 0)
     print("Reference preprocessing complete!")
 else:
@@ -106,26 +111,39 @@ while True:
         print("End of video reached.")
         break
         
-    # --- Apply Perspective Warp Pipeline ---
-    frame = apply_perspective_pipeline(frame_raw)
+    # --- 1. Provide a natural perspective for YOLO inference ---
+    base_frame = preprocess_yolo_frame(frame_raw)
         
-    # Run YOLO inference natively on the warped frame
-    results = model(frame, conf=0.1)
+    # --- 2. Run YOLO directly on the natural flat perspective frame ---
+    results = model(base_frame, conf=0.1)
     
     bike_polygons = []
     other_polygons = []
     if results[0].masks is not None:
         for i, cls in enumerate(results[0].boxes.cls):
-            if int(cls) == 1: # Bicycle / Motorcycle
+            if int(cls) == 1: # Bicycle (user modified to 1 earlier)
                 bike_polygons.append(np.array(results[0].masks.xy[i], np.int32))
             else: # Other objects YOLO detects
                 other_polygons.append(np.array(results[0].masks.xy[i], np.int32))
 
-    ignore_mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+    # Create the blackout mask using the base, unwarped perspective
+    base_ignore_mask = np.zeros(base_frame.shape[:2], dtype=np.uint8)
     for pts in bike_polygons:
-        cv2.fillPoly(ignore_mask, [pts], 255) # Ignore bike
+        cv2.fillPoly(base_ignore_mask, [pts], 255) # Ignore bike
     for pts in other_polygons:
-        cv2.fillPoly(ignore_mask, [pts], 0)   # Do NOT ignore any other object
+        cv2.fillPoly(base_ignore_mask, [pts], 0)   # Do NOT ignore any other object
+
+    # Draw YOLO bounding boxes onto the natural frame (they will get warped visually later!)
+    if results[0].boxes is not None:
+        for box, cls in zip(results[0].boxes.xyxy, results[0].boxes.cls):
+            x1, y1, x2, y2 = map(int, box)
+            class_name = model.names[int(cls)]
+            cv2.rectangle(base_frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            cv2.putText(base_frame, class_name, (x1, max(y1 - 10, 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+    # --- 3. WARP BOTH THE FRAME AND THE MASK ---
+    frame = apply_perspective_warp(base_frame)
+    ignore_mask = apply_perspective_warp(base_ignore_mask)
 
     # --- Foreign Object Detection via absdiff ---
     if ref_blur is not None:
@@ -137,7 +155,7 @@ while True:
             diff_intensity = cv2.cvtColor(diff_color, cv2.COLOR_BGR2GRAY)
             
             # Mask out the bike from the background difference
-            diff_intensity[ignore_mask == 255] = 0
+            diff_intensity[ignore_mask >= 127] = 0 # Use >= 127 because interpolating boolean masks can leave grays
                 
             _, thresh = cv2.threshold(diff_intensity, 50, 255, cv2.THRESH_BINARY)
             thresh = cv2.erode(thresh, None, iterations=1)
@@ -151,24 +169,16 @@ while True:
                 cv2.rectangle(frame, (x, y), (x + box_w, y + box_h), (0, 0, 255), 2)
                 cv2.putText(frame, "Foreign Obj", (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         else:
-            print("ERROR: reference.png warped dimensions do not match live camera! Ignoring background sub.")
+            print("ERROR: warped_reference.png dimensions do not match warped_frame! Ignoring background sub.")
             ref_blur = None # Disable to prevent terminal spam
             
-    # Black out the bicycle in the display window
-    frame[ignore_mask == 255] = (0, 0, 0)
-
-    # Draw blue bounding boxes around all objects YOLO detected
-    if results[0].boxes is not None:
-        for box, cls in zip(results[0].boxes.xyxy, results[0].boxes.cls):
-            x1, y1, x2, y2 = map(int, box)
-            class_name = model.names[int(cls)]
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            cv2.putText(frame, class_name, (x1, max(y1 - 10, 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+    # Black out the bicycle in the display window using our newly warped mask
+    frame[ignore_mask >= 127] = (0, 0, 0)
 
     # Scale the HUGE output frame down a bit so it fits on screen
     display_scale = 0.5
     display_frame = cv2.resize(frame, (0,0), fx=display_scale, fy=display_scale)
-    cv2.imshow("Warped View: Anomaly + YOLO Detection", display_frame)
+    cv2.imshow("Pre-Warp YOLO Detection", display_frame)
 
     # --- Real-Time Syncing ---
     loop_end_time = time.time()
