@@ -17,10 +17,10 @@ def analyze_frame_with_vlm(frame):
     image_bytes = buffer.tobytes()
 
     prompt = (
-        "You are a security monitor for a bicycle. Analyze the image. "
-        "If you see any object that is NOT a bicycle (e.g., a person, a bag, a scooter, a box, or foreign objects), output 'Yes'. "
-        "If the image contains ONLY the bicycle or is empty, output 'No'. "
-        "Do not provide any other text."
+        "You are a security monitor for a bicycle storage system. Analyze the image. "
+        "If you see any object that is NOT a bicycle that is INSIDE of the system (e.g., a person, a bag, a scooter, a box, or foreign objects), output 'Yes' and what item you see. "
+        "If the system contains ONLY the bicycle or is empty, output 'No'. "
+        "It is OK for there to be people or other objects inside of the fram as long as they are not inside of the storage system."
     )
 
     try:
@@ -49,6 +49,7 @@ def main():
     frame_count = 0
     last_vlm_result = "Analyzing..."
     last_vlm_time = time.time()
+    last_color = (255, 255, 255)
     
     print(f"Starting VLM Anomaly Detection using {MODEL_NAME}")
     print("Press 'q' to quit.")
@@ -68,22 +69,26 @@ def main():
             vlm_text = analyze_frame_with_vlm(frame)
             inference_time = time.time() - start_time
             
-            # Clean up the response just in case moondream adds punctuation
-            vlm_text_clean = "".join(c for c in vlm_text if c.isalpha()).lower()
+            # Parse the text carefully to get dynamic content
+            vlm_text_lower = vlm_text.lower().strip()
             
-            if "yes" in vlm_text_clean:
-                last_vlm_result = f"ANOMALY: YES ({inference_time:.1f}s)"
-                color = (0, 0, 255) # Red
-            elif "no" in vlm_text_clean:
+            if vlm_text_lower.startswith("yes"):
+                short_text = vlm_text if len(vlm_text) < 80 else vlm_text[:77] + "..."
+                # Replace newlines with spaces so it renders politely on one line
+                short_text = short_text.replace("\n", " ").strip()
+                last_vlm_result = f"ANOMALY: {short_text} ({inference_time:.1f}s)"
+                last_color = (0, 0, 255) # Red
+            elif vlm_text_lower.startswith("no"):
                 last_vlm_result = f"CLEAR: NO ({inference_time:.1f}s)"
-                color = (0, 255, 0) # Green
+                last_color = (0, 255, 0) # Green
             else:
-                last_vlm_result = f"UNKNOWN: {vlm_text} ({inference_time:.1f}s)"
-                color = (0, 255, 255) # Yellow
+                short_text = vlm_text if len(vlm_text) < 80 else vlm_text[:77] + "..."
+                short_text = short_text.replace("\n", " ").strip()
+                last_vlm_result = f"VLM Output: {short_text} ({inference_time:.1f}s)"
+                last_color = (0, 255, 255) # Yellow
 
         # Draw the LLM's last decision onto the video
-        color = (0, 0, 255) if "YES" in last_vlm_result else ((0, 255, 0) if "NO" in last_vlm_result else (0, 255, 255))
-        cv2.putText(display_frame, last_vlm_result, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
+        cv2.putText(display_frame, last_vlm_result, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, last_color, 2)
         
         # Display the result
         # Note: the video will physically pause every time the VLM analyzes a frame because this is synchronous.
