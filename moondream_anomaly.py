@@ -70,23 +70,13 @@ def main():
             vlm_text = analyze_frame_with_vlm(frame)
             inference_time = time.time() - start_time
             
-            # Parse the text carefully to get dynamic content
-            vlm_text_lower = vlm_text.lower().strip()
-            
-            if vlm_text_lower.startswith("yes"):
-                short_text = vlm_text if len(vlm_text) < 80 else vlm_text[:77] + "..."
-                # Replace newlines with spaces so it renders politely on one line
-                short_text = short_text.replace("\n", " ").strip()
-                last_vlm_result = f"ANOMALY: {short_text} ({inference_time:.1f}s)"
-                last_color = (0, 0, 255) # Red
-            elif vlm_text_lower.startswith("no"):
-                last_vlm_result = f"CLEAR: NO ({inference_time:.1f}s)"
-                last_color = (0, 255, 0) # Green
-            else:
-                short_text = vlm_text if len(vlm_text) < 80 else vlm_text[:77] + "..."
-                short_text = short_text.replace("\n", " ").strip()
-                last_vlm_result = f"VLM Output: {short_text} ({inference_time:.1f}s)"
-                last_color = (0, 255, 255) # Yellow
+            # Show the raw VLM output directly
+            raw_text = vlm_text.replace("\n", " ").strip()
+            if len(raw_text) > 130:
+                raw_text = raw_text[:127] + "..."
+                
+            last_vlm_result = f"{raw_text} ({inference_time:.1f}s)"
+            last_color = (0, 255, 255) # Yellow
 
         # Draw the LLM's last decision onto the video
         cv2.putText(display_frame, last_vlm_result, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, last_color, 2)
