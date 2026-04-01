@@ -19,10 +19,10 @@ def analyze_frame_with_vlm(frame):
     image_bytes = buffer.tobytes()
 
     prompt = (
-        "Look closely at the bicycle in the image. "
-        "Is there any object (like a backpack, bag, box, or person) attached to the bike, sitting on the seat, or touching it? "
-        "If yes, you MUST output exactly: 'YES: ' followed by what the object is. "
-        "If it is JUST a bare bicycle with nothing on it, output exactly 'NO'."
+        "Look closely at the bicycle lock system. "
+        "Name any object (like a backpack, bag, box, or person) that is attached to, resting on, or touching the bicycle. "
+        "Keep your answer very short, just the name of the object. "
+        "If the bicycle is completely bare with nothing attached to it, output exactly 'None'."
     )
 
     try:
