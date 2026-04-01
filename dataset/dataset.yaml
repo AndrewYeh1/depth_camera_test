@@ -1,0 +1,6 @@
+path: C:\Andrew\depth_camera_test\dataset
+train: images/train
+val: images/train
+
+names:
+  0: Bicycle

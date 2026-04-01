@@ -1,7 +1,7 @@
 import cv2
 import os
 
-video_path = "WIN_20260326_10_05_40_Pro.mp4"
+video_path = "WIN_20260326_10_01_55_Pro.mp4"
 output_dir = "extracted_frames"
 
 if not os.path.exists(output_dir):

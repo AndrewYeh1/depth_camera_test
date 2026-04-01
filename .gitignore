@@ -2,3 +2,5 @@
 *.mp4
 *.png
 .venv/
+extracted_frames/
+runs/
