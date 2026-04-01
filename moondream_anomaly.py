@@ -9,19 +9,20 @@ PROCESS_EVERY_N_FRAMES = 30 # Process 1 frame every ~1 second (assuming 30fps)
 
 def analyze_frame_with_vlm(frame):
     """Sends a smaller version of the frame to Moondream via Ollama."""
-    # Resize the frame to a smaller resolution (e.g. 384x384) to save VRAM and speed up processing
-    small_frame = cv2.resize(frame, (384, 384))
+    # Resize the frame while keeping the correct aspect ratio (don't squash it!)
+    h, w = frame.shape[:2]
+    scale = 512 / max(h, w) # Use 512 for a bit more clarity
+    small_frame = cv2.resize(frame, (int(w * scale), int(h * scale)))
     
     # Compress frame to JPEG
     _, buffer = cv2.imencode('.jpg', small_frame)
     image_bytes = buffer.tobytes()
 
     prompt = (
-        "You are a security monitor for a bicycle storage system. Analyze the image. "
-        "Are there any objects INSIDE the storage system that are NOT a bicycle (e.g., a person, bag, or foreign objects)? "
-        "It is OK if there are people or objects in the background, as long as they are not in the storage system. "
-        "If there IS an anomaly, you MUST output exactly: 'YES: ' followed by what the item is. "
-        "If there are NO anomalies, output exactly 'NO'."
+        "Look closely at the bicycle in the image. "
+        "Is there any object (like a backpack, bag, box, or person) attached to the bike, sitting on the seat, or touching it? "
+        "If yes, you MUST output exactly: 'YES: ' followed by what the object is. "
+        "If it is JUST a bare bicycle with nothing on it, output exactly 'NO'."
     )
 
     try:
