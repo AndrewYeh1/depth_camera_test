@@ -19,10 +19,11 @@ def analyze_frame_with_vlm(frame):
     image_bytes = buffer.tobytes()
 
     prompt = (
-        "Look closely at the bicycle lock system. "
+        "Question: Look closely at the bicycle lock system. "
         "Name any object (like a backpack, bag, box, or person) that is attached to, resting on, or touching the bicycle. "
         "Keep your answer very short, just the name of the object. "
-        "If the bicycle is completely bare with nothing attached to it, output exactly 'None'."
+        "If the bicycle is completely bare with nothing attached to it, output exactly 'None'.\n\n"
+        "Answer:"
     )
 
     try:
@@ -34,7 +35,7 @@ def analyze_frame_with_vlm(frame):
                 'images': [image_bytes]
             }],
             options={
-                'temperature': 0.0 # Force deterministic output
+                'temperature': 0.1 # Bumped slightly from 0.0 to prevent token collapse loops
             }
         )
         return response['message']['content'].strip()
