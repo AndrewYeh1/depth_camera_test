@@ -1,5 +1,4 @@
 *.pt
 *.mp4
 .venv/
-extracted_frames/
 runs/
