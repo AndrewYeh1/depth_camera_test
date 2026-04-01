@@ -18,9 +18,10 @@ def analyze_frame_with_vlm(frame):
 
     prompt = (
         "You are a security monitor for a bicycle storage system. Analyze the image. "
-        "If you see any object that is NOT a bicycle that is INSIDE of the system (e.g., a person, a bag, a scooter, a box, or foreign objects), output 'Yes' and what item you see. "
-        "If the system contains ONLY the bicycle or is empty, output 'No'. "
-        "It is OK for there to be people or other objects inside of the fram as long as they are not inside of the storage system."
+        "Are there any objects INSIDE the storage system that are NOT a bicycle (e.g., a person, bag, or foreign objects)? "
+        "It is OK if there are people or objects in the background, as long as they are not in the storage system. "
+        "If there IS an anomaly, you MUST output exactly: 'YES: ' followed by what the item is. "
+        "If there are NO anomalies, output exactly 'NO'."
     )
 
     try:
