@@ -1,8 +1,8 @@
 import cv2
 import os
 
-video_path = "WIN_20260326_10_01_55_Pro.mp4"
-output_dir = "extracted_frames"
+video_path = "videos/1.mp4"
+output_dir = "extracted_frames_1"
 
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
@@ -47,8 +47,8 @@ while True:
     
     # Optionally rotate the frame
     if rotate_90:
-        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-        save_frame = cv2.rotate(save_frame, cv2.ROTATE_90_CLOCKWISE)
+        frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        save_frame = cv2.rotate(save_frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
         
     # Resize for display so it fits nicely on modern monitor screens
     h, w = frame.shape[:2]
